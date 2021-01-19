@@ -1,3 +1,4 @@
+
 from __future__ import print_function
 import random 
 import numpy 
@@ -6,7 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
-# W&B – Import the wandb library
+# W&B - Import the wandb library
 import wandb
 
 # Model architecture definition
@@ -80,10 +81,10 @@ def main():
     numpy.random.seed(config.seed) 
     torch.backends.cudnn.deterministic = True
 
-    # W&B – Initialize a new run
+    # W&B - Initialize a new run
     run = wandb.init(project="pytorch-mnist", save_code=True)
 
-    # W&B – Config is a variable that holds and saves hyperparameters and inputs
+    # W&B - Config is a variable that holds and saves hyperparameters and inputs
     config = wandb.config
 
     config.batch_size = 200          
@@ -115,7 +116,7 @@ def main():
     optimizer = optim.SGD(model.parameters(), lr=config.lr,
                           momentum=config.momentum)
     
-    # W&B – wandb.watch() automatically fetches all layer dimensions, gradients, model parameters and logs them automatically to your dashboard.
+    # W&B - wandb.watch() automatically fetches all layer dimensions, gradients, model parameters and logs them automatically to your dashboard.
     # Using log="all" log histograms of parameter values in addition to gradients
     wandb.watch(model, log="all")
 
@@ -123,7 +124,7 @@ def main():
         train(config, model, device, train_loader, optimizer, epoch)
         test(config, model, device, test_loader)
         
-        # W&B – Save the model checkpoint. This automatically saves a file to the cloud and associates it with the current run.
+        # W&B - Save the model checkpoint. This automatically saves a file to the cloud and associates it with the current run.
         torch.save(model.state_dict(), 'model.onnx')
         wandb.save('model.onnx')
     
