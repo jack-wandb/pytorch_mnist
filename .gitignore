@@ -3,3 +3,6 @@ wandb/
 
 # Model files
 model.*
+
+# VSCode
+.vscode/
