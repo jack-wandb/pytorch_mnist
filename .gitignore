@@ -6,3 +6,6 @@ model.*
 
 # VSCode
 .vscode/
+
+# env
+env/

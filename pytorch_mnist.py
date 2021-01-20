@@ -7,6 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
+
 # W&B - Import the wandb library
 import wandb
 
@@ -55,17 +56,14 @@ def test(args, model, device, test_loader):
             pred = output.max(1, keepdim=True)[1]
             correct += pred.eq(target.view_as(pred)).sum().item()
             
-            # W&B - Creation of a list of wandb Image objects consisting of images, predicted values, and their ground truth values
+            # W&B - media
             example_images.append(
-                wandb.Image(
-                data[0], 
-                    caption="Pred: {}  |  Truth: {}".format(pred[0].item(),target[0])
-                )
-            )   
+                wandb.Image(data[0],caption="Pred: {}  |  Truth: {}".format(pred[0].item(),target[0])))
+
     test_loss /= len(test_loader.dataset)
     test_accuracy = 100. * correct / len(test_loader.dataset)
 
-    # W&B - logging of first 10 example images per test step, along with pred vs GT, test accuracy, test loss
+    # W&B - logging of media, test acc, test loss
     wandb.log({
         "Examples": example_images,
         "Test Accuracy": test_accuracy,
@@ -73,29 +71,32 @@ def test(args, model, device, test_loader):
 
 # Driver function
 def main():
-    use_cuda = not config.no_cuda and torch.cuda.is_available()
+
+    # W&B hyperparameters to be logged
+    hyperparam_defaults = dict(
+            batch_size = 200,          
+            test_batch_size = 1000,               
+            lr = 0.15,               
+            momentum = 0.5,
+            epochs = 5,                     
+            log_interval = 5,
+            seed = 42
+        )
+    # W&B - Initialize a new run and set config
+    run = wandb.init(config=hyperparam_defaults, project="pytorch-mnist", save_code=True)
+    config = wandb.config
+
+    # Cuda (if applicable)
+    use_cuda =  torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
     kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
+
+    # Random seeds
     random.seed(config.seed)       
     torch.manual_seed(config.seed) 
     numpy.random.seed(config.seed) 
     torch.backends.cudnn.deterministic = True
 
-    # W&B - Initialize a new run
-    run = wandb.init(project="pytorch-mnist", save_code=True)
-
-    # W&B - Config is a variable that holds and saves hyperparameters and inputs
-    config = wandb.config
-
-    config.batch_size = 200          
-    config.test_batch_size = 1000  
-    config.epochs = 5             
-    config.lr = 0.15               
-    config.momentum = 0.5           
-    config.no_cuda = False         
-    config.seed = 42               
-    config.log_interval = 10
-    
     # DataLoaders
     train_loader = torch.utils.data.DataLoader(
         datasets.MNIST('../data', train=True, download=True,
@@ -116,27 +117,21 @@ def main():
     optimizer = optim.SGD(model.parameters(), lr=config.lr,
                           momentum=config.momentum)
     
-    # W&B - wandb.watch() automatically fetches all layer dimensions, gradients, model parameters and logs them automatically to your dashboard.
-    # Using log="all" log histograms of parameter values in addition to gradients
+    # W&B - wandb.watch() fetches layer dimensions, gradients, model parameters 
     wandb.watch(model, log="all")
 
     for epoch in range(1, config.epochs + 1):
         train(config, model, device, train_loader, optimizer, epoch)
         test(config, model, device, test_loader)
         
-        # W&B - Save the model checkpoint. This automatically saves a file to the cloud and associates it with the current run.
-        torch.save(model.state_dict(), 'model.onnx')
-        wandb.save('model.onnx')
-    
-        # W&B Artifacts - Save each model as a W&B Artifact to maintain data lineage and centralize storage of models produced
-        # by this run.
-        model_artifact = wandb.Artifact('{}-pytorch-mnist-model'.format(run.id), type='model')
+    # W&B - Save the model checkpoint. This automatically saves a file to the cloud and associates it with the current run.
+    torch.save(model.state_dict(), 'model.onnx')
+    wandb.save('model.onnx')
 
-        # Add model file to artifact's contents
-        model_artifact.add_file('model.onnx')
-
-        # Save artifact version to W&B. W&B will automatically version each of these models for you.
-        run.log_artifact(model_artifact)
+    # W&B - Artifact
+    model_artifact = wandb.Artifact('{}-pytorch-mnist-model'.format(run.id), type='model')
+    model_artifact.add_file('model.onnx')
+    run.log_artifact(model_artifact)
      
 if __name__ == '__main__':
     main()
