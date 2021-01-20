@@ -73,6 +73,22 @@ def test(args, model, device, test_loader):
 
 # Driver function
 def main():
+
+    # W&B - Initialize a new run
+    run = wandb.init(project="pytorch-mnist", save_code=True)
+
+    # W&B - Config is a variable that holds and saves hyperparameters and inputs
+    config = wandb.config
+
+    config.batch_size = 200
+    config.test_batch_size = 1000
+    config.epochs = 5
+    config.lr = 0.15
+    config.momentum = 0.5
+    config.no_cuda = False
+    config.seed = 42
+    config.log_interval = 10
+
     use_cuda = not config.no_cuda and torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
     kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
@@ -81,21 +97,6 @@ def main():
     numpy.random.seed(config.seed) 
     torch.backends.cudnn.deterministic = True
 
-    # W&B - Initialize a new run
-    run = wandb.init(project="pytorch-mnist", save_code=True)
-
-    # W&B - Config is a variable that holds and saves hyperparameters and inputs
-    config = wandb.config
-
-    config.batch_size = 200          
-    config.test_batch_size = 1000  
-    config.epochs = 5             
-    config.lr = 0.15               
-    config.momentum = 0.5           
-    config.no_cuda = False         
-    config.seed = 42               
-    config.log_interval = 10
-    
     # DataLoaders
     train_loader = torch.utils.data.DataLoader(
         datasets.MNIST('../data', train=True, download=True,
